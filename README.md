@@ -1,3 +1,6 @@
+Using the basis in [Schnorr 1991] instead of [Schnorr 2021]
+
+----------------------------------
 # SchnorrGate
 ## Testing Schnorr's factoring Claim in Sage
 

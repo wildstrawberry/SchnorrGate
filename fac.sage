@@ -14,32 +14,34 @@ def first_primes(n):
 	return P
 
 def is_smooth(x, P):
+	if x==0:
+		return False
 	y = x
 	for p in P:
 		while p.divides(y):
 			y /= p
 	return abs(y) == 1
 
-
-
 # Test if a factoring relation was indeed found.
-def test_Schnorr(N, n, prec=1000):
+def test_Schnorr(N, n, c, prec=10):
 	P = first_primes(n)
-	f = list(range(1, n+1))
-	shuffle(f)
+	#f = list(range(1, n+1))
+	#shuffle(f)
+	#print(P)
 
 	# Scale up and round
 	def sr(x):
 		return round(x * 2^prec)
 
-	diag = [sr(N*f[i]) for i in range(n)] + [sr(N*ln(N))]
+#	diag = [sr(N*f[i]) for i in range(n)] + [sr(N*ln(N))]       #  this is the Basis from https://eprint.iacr.org/2021/232.pdf, doesn't seem to work
+	diag = [sr( ln(P[i]) ) for i in range(n)] + [sr(N^c*ln(N))] #  this is the Basis from Schnorr 1991, at least it works for small n
+
 	B = diagonal_matrix(diag, sparse=False)
 	for i in range(n):
-		B[i, n] = sr(N*ln(P[i]))
-
+		B[i, n] = sr(N^c*ln(P[i]))
 
 	b = svp(B)
-	e = [b[i] / sr(N*f[i]) for i in range(n)]
+	e = [b[i] / sr( ln(P[i]) ) for i in range(n)]
 
 	u = 1
 	v = 1
@@ -49,23 +51,28 @@ def test_Schnorr(N, n, prec=1000):
 			u *= P[i]^e[i]
 		if e[i] < 0:
 			v *= P[i]^(-e[i])
+	print("u, u - v*N", u, u - v*N)
+	success = is_smooth(u - v*N, P) 
+	if success:
+		print("diag of B:", diag)
+		print("e = ", e)
 
-	return is_smooth(u - v*N, P) 
+	return success
 
 try:
 	bits = int(sys.argv[1])
 except:
-	bits = 400
+	bits = 40
 
 try:
 	n = int(sys.argv[2])
 except:
-	n = 47
+	n = 40
 
 try:
 	trials = int(sys.argv[3])
 except:
-	trials = 100
+	trials = 10
 
 
 print("Testing Schnorr's relation finding algorithm with n=%d on RSA-moduli of %d bits, %d trials"%(n, bits, trials))
@@ -75,9 +82,10 @@ for i in range(trials):
 	p = random_prime(2^(bits/2), false, 2^(bits/2-1))
 	q = random_prime(2^(bits/2), false, 2^(bits/2-1))
 	N = p*q
-	success = test_Schnorr(N, n)
+	print("N, p, q", N, p, q)
+	success = test_Schnorr(N, n, 1.2)
 	successes += success
-	print(success, end="\t")
+	print(success)
 	sys.stdout.flush()
 
 print("\n%d Factoring Relation found out of %d trials"%(successes, trials))
